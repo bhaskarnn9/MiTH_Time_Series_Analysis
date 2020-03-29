@@ -1,0 +1,98 @@
+---
+title: "Prediction of Sales"
+author: "Bhaskar"
+date: "3/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+
+```{r }
+setwd("/Users/apple/Desktop/Others/INSOFE/MITH")
+library(readxl)
+train <- read_xlsx("master.xlsx",sheet = "train")
+test <- read_xlsx("master.xlsx",sheet = "test")
+head(train)
+str(train)
+head(test)
+tail(test)
+library(psych)
+describe(train)
+library(lubridate)
+train$date <- ymd(train$date)
+train$product_identifier <- as.factor(train$product_identifier)
+train$department_identifier <- as.factor(train$department_identifier)
+train$category_of_product <- as.factor(train$category_of_product)
+train$outlet <- as.factor(train$outlet)
+train$state <- as.factor(train$state)
+
+test$date <- ymd(test$date)
+test$product_identifier <- as.factor(test$product_identifier)
+test$department_identifier <- as.factor(test$department_identifier)
+test$category_of_product <- as.factor(test$category_of_product)
+test$outlet <- as.factor(test$outlet)
+test$state <- as.factor(test$state)
+head(test)
+```
+
+```{r}
+train$date <- as.Date(train$date)
+library(xts)
+sales_xts <- as.xts(train[ ,7], order.by = train$date)
+plot(sales_xts)
+plot(diff(sales_xts))
+```
+
+```{r}
+sprice <- as.xts(train[ ,10], order.by = train$date)
+plot(sprice$`Selling price`)
+```
+
+```{r}
+aggregate(sales ~ department_identifier,sum,data=train) #dept 33 attained highest sales
+aggregate(sales ~ category_of_product,sum,data=train) #drinks and food
+aggregate(sales ~ outlet,sum,data=train) # outlet# 113
+aggregate(sales ~ state,sum,data=train) #state mahrastra
+aggregate(sales ~ product_identifier,sum,data=train) #product  # 2935
+
+aggregate(sales ~ department_identifier,mean,data=train)
+aggregate(sales ~ category_of_product,mean,data=train)
+aggregate(sales ~ outlet,mean,data=train)
+aggregate(sales ~ state,mean,data=train)
+
+aggregate(sales ~ department_identifier,sd,data=train)
+aggregate(sales ~ category_of_product,sd,data=train)
+aggregate(sales ~ outlet,sd,data=train)
+aggregate(sales ~ state,sd,data=train)
+
+
+aggregate(sales ~ department_identifier,length,data=train)
+aggregate(sales ~ category_of_product,length,data=train)
+aggregate(sales ~ outlet,length,data=train)
+aggregate(sales ~ state,length,data=train)
+
+```
+
+```{r}
+trainz <- subset(train,sales!=0)
+dim(trainz)
+reg1 <- lm(sales ~ .,data=train[,c(7,4,5,6,2,8,10)])
+library(texreg)
+screenreg(reg1)
+
+cor(train$sales,train$`Selling price`)
+
+library(DMwR)
+regr.eval(train$sales,reg1$fitted.values)
+test$sales <- predict(reg1,test)
+prediction <- test[,c(1,11)]
+write.csv(prediction,"sample_prediction.csv")
+```
+
+
